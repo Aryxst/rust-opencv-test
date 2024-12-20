@@ -1,0 +1,8 @@
+[package]
+name = "rust-opencv-test"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+opencv = { version = "0.93.5" }
+xcap = "0.1.0"
