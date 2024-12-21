@@ -1,12 +1,7 @@
 mod od;
-use opencv::{
-    boxed_ref::BoxedRef,
-    core::{Point2i, ToInputArray, _InputArray},
-    highgui, imgcodecs, imgproc,
-    prelude::*,
-    Result,
-};
-use std::{io, time::Instant};
+use od::*;
+use opencv::{core::MatTraitConstManual, highgui, imgcodecs, Result};
+use std::io;
 use xcap::{image::EncodableLayout, Window};
 
 trait WindowExtra {
@@ -24,7 +19,9 @@ impl WindowExtra for Window {
 }
 
 fn main() -> Result<()> {
-    let mut frame = Vec::new();
+    #[allow(unused)]
+    const THRESHOLD: f32 = 1.0_f32;
+
     let mut window_name = String::new();
 
     println!();
@@ -38,8 +35,10 @@ fn main() -> Result<()> {
 
     let window = Window::get_window(window_name);
 
+    let mut frame = Vec::new();
+
     while highgui::wait_key(1)? < 0 {
-        let start = Instant::now();
+        /* let start = Instant::now(); */
 
         frame.clear();
 
@@ -52,38 +51,16 @@ fn main() -> Result<()> {
             )
             .expect("Failed to write image");
 
-        if let Ok(img) = imgcodecs::imdecode(&frame.as_bytes(), imgcodecs::IMREAD_COLOR) {
-            // Panics
-            detect_image(
-                &Mat::from_bytes::<Point2i>(frame.as_bytes())
-                    .unwrap()
-                    .input_array()
-                    .unwrap(),
-            );
+        if let Ok(img) = imgcodecs::imdecode(&frame.as_bytes(), imgcodecs::IMREAD_GRAYSCALE) {
+            let result = vision::detect_image(&img);
+            println!("{:?}", &result.data_typed::<f32>().unwrap());
 
             highgui::imshow("Computer Vision", &img)?;
         } else {
             eprintln!("Failed to decode image");
         }
 
-        println!("{} FPS", 1.0 / start.elapsed().as_secs_f32());
+        /* println!("{} FPS", 1.0 / start.elapsed().as_secs_f32()); */
     }
     Ok(())
-}
-
-fn detect_image(haystack: &BoxedRef<'_, _InputArray>) {
-    let mut result = Mat::default();
-    let needle = imgcodecs::imread("needle_spawn_sign.png", imgcodecs::IMREAD_UNCHANGED)
-        .expect("Failed to read needle image");
-
-    imgproc::match_template(
-        &haystack.input_array().unwrap(),
-        &needle.input_array().unwrap(),
-        &mut result,
-        imgproc::TM_CCORR_NORMED,
-        &needle.input_array().unwrap(),
-    )
-    .unwrap();
-
-    println!("{:?}", result);
 }
